@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Analyze</title>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    /* SECTION SWITCHING (unchanged) */
+    .current {
+      opacity: 1;
+    }
+
+    #stack {
+      position: relative;
+    }
+
+    #stack section {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      transform: translateY(10px);
+    }
+
+    #stack section.current {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    /* ============================= */
+    /* ✅ FIXED NUMBER INPUT SPINNERS */
+    /* ============================= */
+
+    /* FORCE native look first */
+    input[type="number"] {
+      -webkit-appearance: number-input;
+      -moz-appearance: number-input;
+      appearance: number-input;
+
+      background: #151515;
+      border: 1px solid #2c2c2c;
+      border-radius: 8px;
+      color: #eaeaea;
+      height: 38px;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    /* Chrome / Edge spinner */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
+      background-color: #2a2a2a;
+      filter: invert(1);
+      border-left: 1px solid #2c2c2c;
+      cursor: pointer;
+    }
+
+    /* Firefox fix */
+    input[type="number"] {
+      -moz-appearance: number-input;
+    }
+
+    input[type="datetime-local"] {
+      background: #151515;
+      color: #eaeaea;
+      border: 1px solid #2c2c2c;
+      border-radius: 8px;
+      padding: 0 12px;
+      height: 38px;
+    }
+
+    /* Fix icon visibility */
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      opacity: 0.8;
+      cursor: pointer;
+    }
+
+    /* ============================= */
+    /* BIAS RESULT CARD (PURPLE UI)  */
+    /* ============================= */
+
+    .bias-card {
+      width: 100%;
+      max-width: 460px;
+      background: radial-gradient(120% 120% at top left, #2a1245, #120918);
+      border: 1px solid #5c2d91;
+      border-radius: 16px;
+      padding: 20px;
+      color: #eaeaea;
+      box-shadow: 0 0 0 1px rgba(150, 80, 255, 0.15);
+    }
+
+    .bias-header {
+      margin-bottom: 16px;
+    }
+
+    .bias-header h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #b88cff;
+    }
+
+    .bias-header span {
+      font-size: 12px;
+      color: #9a9a9a;
+    }
+
+    .bias-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .bias-box {
+      background: #0f0618;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .bias-box b {
+      display: block;
+      font-size: 14px;
+      margin-top: 4px;
+      color: #ffffff;
+    }
+
+    .bias-analysis {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #cfcfcf;
+    }
+
+    .bias-warning {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(255, 165, 0, 0.1);
+      border: 1px solid rgba(255, 165, 0, 0.4);
+      font-size: 12px;
+      color: #ffb84d;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="container" style="display:flex; align-items:center; gap:12px;">
+      <div class="logo">CB</div>
+      <div>
+        <h1 style="margin:0;font-size:15px;">Cognitive Bias Tracker</h1>
+        <p style="margin:2px 0 0;font-size:12px;color:#a0a0a0;">
+          Understanding why you spend, not just what
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+
+
+  <div class="nav">
+    <div class="container"> <a
+        style="color:#ffffff; text-decoration:none; font-size:13px; cursor:pointer; margin-right:16px; padding-bottom:6px; display:inline-block; font-weight:600; border-bottom:2px solid #ffffff;"
+        onclick="toAnalyze();"> Analyze </a> <a
+        style="color:#a0a0a0; text-decoration:none; font-size:13px; cursor:pointer; margin-right:16px; padding-bottom:6px; display:inline-block;"
+        onclick="toHistory();"> History </a> <a
+        style="color:#a0a0a0; text-decoration:none; font-size:13px; cursor:pointer; margin-right:16px; padding-bottom:6px; display:inline-block;"
+        onclick="toInsights();"> Insights </a>
+    </div>
+  </div>
+
+
+
+
+
+  <section id="stack">
+    <section id="analyze" class="current">
+      <!-- APP WRAPPER -->
+      <div style="display:flex; justify-content:center;">
+        <div style="width:100%; max-width:1000px;">
+
+          <!-- SECTION HEADER -->
+          <div style="padding:24px 0 0;">
+            <h2 style="margin:0; font-size:18px;">Log an Expense</h2>
+            <p style="margin:6px 0 0; font-size:13px; color:#a0a0a0;">
+              Fill in the details and we'll reveal the psychology behind your spending.
+            </p>
+          </div>
+
+          <!-- GRID -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px; padding:24px 0;">
+
+            <!-- LEFT CARD -->
+            <div
+              style="background:linear-gradient(180deg,#191919,#121212); border:1px solid #292929; border-radius:12px; padding:20px;">
+
+              <div style="display:flex; flex-direction:column; margin-bottom:14px;">
+                <label style="font-size:11px; color:#9a9a9a; margin-bottom:6px;">Amount</label>
+                <input id="amount" type="number" placeholder="₹ 0" />
+              </div>
+
+              <div style="display:flex; flex-direction:column; margin-bottom:14px;">
+                <label style="font-size:11px; color:#9a9a9a; margin-bottom:6px;">Category</label>
+                <select
+                  style="height:38px; background:#151515; border:1px solid #2c2c2c; border-radius:8px; color:#eaeaea; padding:0 12px; font-size:13px;"
+                  id="category">
+                  <option selected disabled>Select category</option>
+                  <option>Food</option>
+                  <option>Travel</option>
+                  <option>Shopping</option>
+                  <option>Bill</option>
+                  <option>Others</option>
+                </select>
+              </div>
+
+              <div style="display:flex; flex-direction:column; margin-bottom:14px;">
+                <label style="font-size:11px; color:#9a9a9a; margin-bottom:6px;">Current Mood</label>
+                <select
+                  style="height:38px; background:#151515; border:1px solid #2c2c2c; border-radius:8px; color:#eaeaea; padding:0 12px; font-size:13px;"
+                  id="mood">
+                  <option selected disabled>How are you feeling?</option>
+                  <option>Happy</option>
+                  <option>Sad</option>
+                  <option>Stressed</option>
+                  <option>Neutral</option>
+                </select>
+              </div>
+
+              <div style="display:flex; flex-direction:column; margin-bottom:14px;">
+                <label style="font-size:11px; color:#9a9a9a; margin-bottom:6px;">Discount Applied?</label>
+                <select
+                  style="height:38px; background:#151515; border:1px solid #2c2c2c; border-radius:8px; color:#eaeaea; padding:0 12px; font-size:13px;"
+                  id="discount">
+                  <option selected disabled>Was there a discount?</option>
+                  <option>Yes</option>
+                  <option>No</option>
+                </select>
+              </div>
+
+              <div style="display:flex; flex-direction:column; margin-bottom:14px;">
+                <label style="font-size:11px; color:#9a9a9a; margin-bottom:6px;">Reason for Purchase</label>
+                <select
+                  style="height:38px; background:#151515; border:1px solid #2c2c2c; border-radius:8px; color:#eaeaea; padding:0 12px; font-size:13px;"
+                  id="reason">
+                  <option selected disabled>Why are you buying this?</option>
+                  <option>Need - I want this</option>
+                  <option>Want - I desire this</option>
+                  <option>Urgent - limited time</option>
+                </select>
+              </div>
+
+              <div style="display:flex; flex-direction:column; margin-bottom:14px;">
+                <label style="font-size:11px; color:#9a9a9a; margin-bottom:6px;">Time of Purchase</label>
+                <input type="datetime-local"
+                  style="height:38px; background:#151515; border:1px solid #2c2c2c; border-radius:8px; color:#eaeaea; padding:0 12px; font-size:13px;"
+                  id="time" />
+              </div>
+
+              <button
+                style="width:100%; height:42px; background:#fff; color:#000; border-radius:8px; border:none; font-size:13px; font-weight:600; cursor:pointer;">
+                Analyze Spending
+              </button>
+
+            </div>
+
+            <!-- RIGHT CARD -->
+            <div style="display: inline-block; width: 450px; height:250px; background-color: #16100a; border: 1px solid #2d2116;  border-radius: 14px; 
+padding: 29px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; vertical-align: top;
+border-color: orange  ;">
+              <div style="display: flex; align-items: center; margin-bottom: 10px; gap: 8px;">
+                <div
+                  style="background-color: #2d1e12; padding: 5px; border-radius: 6px; flex-shrink: 0; display: flex;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="13 2 3 14 12 14 10 22 21 8 12 8 13 2"></polyline>
+</svg>
+                </div>
+                <div>
+                  <p
+                    style="color: #777; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; line-height: 1;">
+                    Detected Bias</p>
+                  <h2 style="color: #f59e0b; font-size: 13px; font-weight: 700; margin: 2px 0 0 0; line-height: 1;">
+                    Impulse Buying</h2>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px;">
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Amt</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">₹500</p>
+                </div>
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Cat</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">Shop</p>
+                </div>
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Mood</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">Neu</p>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 10px;">
+                <p
+                  style="color: #666; font-size: 8px; font-weight: 800; text-transform: uppercase; margin-bottom: 3px;">
+                  Behavioral Analysis</p>
+                <p style="color: #bbb; font-size: 11px; line-height: 1.3; margin: 0;">
+                  This purchase was not planned and lacks a clear necesssity. Impulse buys are often driven by instant gratification and short-term thinking.
+                </p>
+              </div>
+
+              <div
+                style="background-color: #090604; border: 1px solid #2d2116; border-radius: 8px; padding: 8px 10px; margin-bottom: 0;">
+                <div style="display: flex; gap: 6px; align-items: flex-start;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  <p style="color: #ddd; font-size: 10.5px; line-height: 1.3; margin: 0;">
+                    <span style="color: #f59e0b; font-weight: 700;">Warning:</span> You are spending on wants without delibrate thought.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+            
+          </div>
+      </div>
+    </section>
+
+    <section id="history" class="">
+      <div class="wrapper" style="display: flex; justify-content: center;">
+        <div class="app" style="width: 100%; max-width: 1000px;">
+
+          <h2 class="page-title" style="font-size: 18px; font-weight: 600; margin: 0 0 6px; padding: 24px;">
+            Transaction History
+          </h2>
+
+          <p class="page-subtitle" style="font-size: 13px; color: #9a9a9a; margin: 0; padding: 0 24px 48px;">
+            A record of all your analyzed expenses with detected biases.
+          </p>
+
+          <div class="empty-state"
+            style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; color: #9a9a9a;">
+
+            <div class="empty-icon"
+              style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #2f2f2f; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+              ≡
+            </div>
+
+            <div class="empty-title" style="font-size: 13px; color: #eaeaea; margin-bottom: 6px;">
+              No transactions yet
+            </div>
+
+            <div class="empty-text" style="font-size: 12px; max-width: 320px; line-height: 1.6;">
+              Use the Analyze tab to log your first expense and see the behavioral insights.
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <section id="insights" class="">
+      <div class="wrapper" style="display: flex; justify-content: center;">
+        <div class="app" style="width: 100%; max-width: 1000px;">
+
+          <h2 class="page-title" style="font-size: 18px; font-weight: 600; margin: 0 0 6px; padding: 24px;">
+            Behavioral Insights
+          </h2>
+
+          <p class="page-subtitle" style="font-size: 13px; color: #9a9a9a; margin: 0; padding: 0 24px 48px;">
+            Patterns and analytics across all your spending entries.
+          </p>
+
+          <div class="empty-state"
+            style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; color: #9a9a9a;">
+
+            <div class="empty-icon"
+              style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #2f2f2f; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+              ≡
+            </div>
+
+            <div class="empty-title" style="font-size: 13px; color: #eaeaea; margin-bottom: 6px;">
+              No data to analyze yet
+            </div>
+
+            <div class="empty-text" style="font-size: 12px; max-width: 320px; line-height: 1.6;">
+              Log at least one expense in the Analyze tab to see your behavioral spending insights.
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+  </section>
+</body>
+<script>
+  let transactions = [];
+
+  /* =========================
+     BIAS ENGINE (UNCHANGED CORE)
+  ========================= */
+
+  function detectBias(t) {
+
+    let time = t.time ? new Date(t.time) : new Date();
+    let hour = time.getHours();
+
+    let reason = (t.reason || "").toLowerCase();
+    let mood = (t.mood || "").toLowerCase();
+
+    if ((mood.includes("sad") || mood.includes("stressed")) && t.amount > 1000) {
+      return {
+        bias: "Emotional Spending",
+        msg: "You are spending due to emotional state.",
+        color: "red"
+      };
+    }
+
+    if (t.discount === "Yes" && reason.includes("want")) {
+      return {
+        bias: "Discount-Driven Spending",
+        msg: "Discount influenced your decision.",
+        color: "orange"
+      };
+    }
+
+    if (t.discount === "Yes" && reason.includes("urgent")) {
+      return {
+        bias: "FOMO Spending",
+        msg: "Urgency + discount created pressure.",
+        color: "red"
+      };
+    }
+
+    if (hour >= 22 && reason.includes("want")) {
+      return {
+        bias: "Late-Night Impulse",
+        msg: "Low self-control at night.",
+        color: "orange"
+      };
+    }
+
+    if (reason.includes("want")) {
+      return {
+        bias: "Impulse Buying",
+        msg: "Unplanned emotional decision.",
+        color: "orange"
+      };
+    }
+
+    return {
+      bias: "Logical Spending",
+      msg: "This appears rational.",
+      color: "green"
+    };
+  }
+
+  /* =========================
+     CLICK HANDLER (FIXED SAFE)
+  ========================= */
+
+  document.querySelector("button").addEventListener("click", function () {
+    try {
+      let amount = document.getElementById("amount").value;
+      let category = document.getElementById("category").value;
+      let mood = document.getElementById("mood").value;
+      let discount = document.getElementById("discount").value;
+      let reason = document.getElementById("reason").value;
+      let time = document.getElementById("time").value;
+
+      if (!amount || !category || !mood || !discount || !reason) {
+        alert("Please fill all fields");
+        return;
+      }
+
+      let transaction = {
+        amount: Number(amount),
+        category,
+        mood,
+        discount,
+        reason,
+        time
+      };
+
+      let result = detectBias(transaction);
+
+      transaction.bias = result.bias;
+      transactions.push(transaction);
+
+      showResult(result);
+      updateHistory();
+      updateInsights();
+    }
+    catch (err) {
+      console.log("error:", err);
+    }
+  });
+
+  /* =========================
+     FIXED RESULT DISPLAY
+  ========================= */
+
+  function showResult(result) {
+
+    let t = transactions[transactions.length - 1];
+
+    let explanationMap = {
+      "FOMO Spending":
+        "This purchase was driven by fear of missing out — combining urgency with a discount creates a powerful psychological trigger that bypasses rational decision-making.",
+      "Emotional Spending":
+        "Your emotional state influenced this purchase, reducing objective judgment and increasing comfort‑seeking behavior.",
+      "Impulse Buying":
+        "This was a spontaneous decision made without sufficient planning or necessity evaluation.",
+      "Logical Spending":
+        "Your decision appears intentional, controlled, and aligned with rational needs."
+    };
+
+    let warningMap = {
+      "FOMO Spending":
+        "⚠ You are reacting to scarcity, not making a logical decision.",
+      "Emotional Spending":
+        "⚠ Emotional state influenced this purchase.",
+      "Impulse Buying":
+        "⚠ Impulse behavior detected.",
+    };
+
+    document.getElementById("resultBox").innerHTML = `
+    <div class="bias-card">
+
+      <div class="bias-header">
+        <span>DETECTED BIAS</span>
+        <h3>${result.bias}</h3>
+      </div>
+
+      <div class="bias-row">
+        <div class="bias-box">
+          Amount
+          <b>₹${t.amount}</b>
+        </div>
+        <div class="bias-box">
+          Category
+          <b>${t.category}</b>
+        </div>
+        <div class="bias-box">
+          Mood
+          <b>${t.mood}</b>
+        </div>
+      </div>
+
+      <div class="bias-analysis">
+        ${explanationMap[result.bias]}
+      </div>
+
+      ${warningMap[result.bias]
+        ? `<div class="bias-warning">${warningMap[result.bias]}</div>`
+        : ""
+      }
+
+    </div>
+  `;
+  }
+
+  /* =========================
+     HISTORY
+  ========================= */
+
+  function updateHistory() {
+    let container = document.querySelector("#history .empty-state");
+
+    if (transactions.length === 0) return;
+
+    let html = `<div style="padding:20px;">`;
+
+    transactions.forEach(t => {
+      html += `
+      <div style="border:1px solid #333;padding:10px;margin:10px 0;border-radius:8px;">
+        <b>₹${t.amount}</b> | ${t.category} | ${t.bias}
+      </div>
+    `;
+    });
+
+    html += `</div>`;
+
+    container.innerHTML = html;
+  }
+
+  /* =========================
+     INSIGHTS
+  ========================= */
+
+  function updateInsights() {
+    let emotional = transactions.filter(t => t.bias === "Emotional Spending").length;
+    let impulse = transactions.filter(t => t.bias === "Impulse Buying").length;
+    let total = transactions.length;
+
+    let container = document.querySelector("#insights .empty-state");
+
+    if (total === 0) return;
+
+    container.innerHTML = `
+    <div class="empty-state"
+      style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; color: #9a9a9a;">
+
+      <div class="empty-icon"
+        style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #2f2f2f; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+        ≡
+      </div>
+
+      <div class="empty-title" style="font-size: 13px; color: #eaeaea; margin-bottom: 6px;">
+        Behavioral Insights Updated
+      </div>
+
+      <div class="empty-text" style="font-size: 12px; max-width: 320px; line-height: 1.6;">
+        Total Transactions: ${total} <br>
+        Emotional Spending: ${emotional} <br>
+        Impulse Spending: ${impulse} <br><br>
+
+        ${emotional > impulse
+        ? "You tend to spend emotionally."
+        : "Your spending is mostly controlled."
+      }
+      </div>
+
+    </div>
+  `;
+  }
+  let a = document.getElementById("analyze");
+  let b = document.getElementById("history");
+  let c = document.getElementById("insights");
+
+  let nav = document.querySelectorAll(".nav a");
+  let navA = nav[0];
+  let navB = nav[1];
+  let navC = nav[2];
+
+  function resetNav() {
+    nav.forEach(el => {
+      el.style.color = "#a0a0a0";
+      el.style.fontWeight = "400";
+      el.style.borderBottom = "2px solid transparent";
+    });
+  }
+
+  function setActive(el) {
+    el.style.color = "#ffffff";
+    el.style.fontWeight = "600";
+    el.style.borderBottom = "2px solid #ffffff";
+  }
+
+  function showSection(section, navItem) {
+    a.classList.remove("current");
+    b.classList.remove("current");
+    c.classList.remove("current");
+
+    section.classList.add("current");
+
+    resetNav();
+    setActive(navItem);
+  }
+
+  function toAnalyze() {
+    showSection(a, navA);
+  }
+
+  function toHistory() {
+    showSection(b, navB);
+    updateHistory();
+  }
+
+  function toInsights() {
+    showSection(c, navC);
+    updateInsights();
+  }
+</script>
+
+</html>
+
+
+<!-- 
+<div style="display: inline-block; width: 450px; height:250px; background-color: #16100a; border: 1px solid #2d2116;  border-radius: 14px; 
+padding: 29px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; vertical-align: top;
+border-color: orange  ;">
+              <div style="display: flex; align-items: center; margin-bottom: 10px; gap: 8px;">
+                <div
+                  style="background-color: #2d1e12; padding: 5px; border-radius: 6px; flex-shrink: 0; display: flex;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                    <polyline points="16 7 22 7 22 13"></polyline>
+                  </svg>
+                </div>
+                <div>
+                  <p
+                    style="color: #777; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; line-height: 1;">
+                    Detected Bias</p>
+                  <h2 style="color: #f59e0b; font-size: 13px; font-weight: 700; margin: 2px 0 0 0; line-height: 1;">
+                    Discount–Driven</h2>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px;">
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Amt</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">₹500</p>
+                </div>
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Cat</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">Shop</p>
+                </div>
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Mood</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">Neu</p>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 10px;">
+                <p
+                  style="color: #666; font-size: 8px; font-weight: 800; text-transform: uppercase; margin-bottom: 3px;">
+                  Analysis</p>
+                <p style="color: #bbb; font-size: 11px; line-height: 1.3; margin: 0;">
+                  You bought this because of a discount. This creates an illusion of saving while causing more spending.
+                </p>
+              </div>
+
+              <div
+                style="background-color: #090604; border: 1px solid #2d2116; border-radius: 8px; padding: 8px 10px; margin-bottom: 0;">
+                <div style="display: flex; gap: 6px; align-items: flex-start;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  <p style="color: #ddd; font-size: 10.5px; line-height: 1.3; margin: 0;">
+                    <span style="color: #f59e0b; font-weight: 700;">Note:</span> Don't buy what you don't need for a
+                    deal.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div> -->
+
+
+
+<!-- 
+          <div style="display: inline-block; width: 450px; height:250px; background-color: #16100a; border: 1px solid #2d2116;  border-radius: 14px; 
+padding: 29px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; vertical-align: top;
+border-color: rgb(255, 0, 60)  ;">
+              <div style="display: flex; align-items: center; margin-bottom: 10px; gap: 8px;">
+                <div
+                  style="background-color: #50082e; padding: 5px; border-radius: 6px; flex-shrink: 0; display: flex;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b51068" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                </div>
+                <div>
+                  <p
+                    style="color: #777; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; line-height: 1;">
+                    Detected Bias</p>
+                  <h2 style="color: #c72169; font-size: 13px; font-weight: 700; margin: 2px 0 0 0; line-height: 1;">
+                    Emotional Spending</h2>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px;">
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Amt</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">₹500</p>
+                </div>
+                <div  
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Cat</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">Shop</p>
+                </div>
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Mood</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">Neu</p>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 10px;">
+                <p
+                  style="color: #666; font-size: 8px; font-weight: 800; text-transform: uppercase; margin-bottom: 3px;">
+                  Behavioral Analysis</p>
+                <p style="color: #bbb; font-size: 11px; line-height: 1.3; margin: 0;">
+                  Even small purchases made during emotional lows can signal a pattern of emotional spending - using buying as a coping mechanism.
+                </p>
+              </div>
+
+              <div
+                style="background-color: #090604; border: 1px solid #2d2116; border-radius: 8px; padding: 8px 10px; margin-bottom: 0;">
+                <div style="display: flex; gap: 6px; align-items: flex-start;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  <p style="color: #ddd; font-size: 10.5px; line-height: 1.3; margin: 0;">
+                    <span style="color: #f59e0b; font-weight: 700;">Warning:</span> Check if this purchase is tied to your current emotional state.
+                  </p>
+                </div>
+              </div>
+            </div> -->
+
+<!-- 
+            <div style="display: inline-block; width: 450px; height:250px; background-color: #16100a; border: 1px solid #2d2116;  border-radius: 14px; 
+padding: 29px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; vertical-align: top;
+border-color: orange  ;">
+              <div style="display: flex; align-items: center; margin-bottom: 10px; gap: 8px;">
+                <div
+                  style="background-color: #2d1e12; padding: 5px; border-radius: 6px; flex-shrink: 0; display: flex;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <polyline points="13 2 3 14 12 14 10 22 21 8 12 8 13 2"></polyline>
+</svg>
+                </div>
+                <div>
+                  <p
+                    style="color: #777; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; line-height: 1;">
+                    Detected Bias</p>
+                  <h2 style="color: #f59e0b; font-size: 13px; font-weight: 700; margin: 2px 0 0 0; line-height: 1;">
+                    Impulse Buying</h2>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px;">
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Amt</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">₹500</p>
+                </div>
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Cat</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">Shop</p>
+                </div>
+                <div
+                  style="background-color: #0e0a07; border: 1px solid #231911; border-radius: 8px; padding: 6px 0; text-align: center;">
+                  <p
+                    style="color: #555; font-size: 7px; font-weight: 700; text-transform: uppercase; margin: 0 0 1px 0;">
+                    Mood</p>
+                  <p style="color: #eee; font-size: 11px; font-weight: 700; margin: 0;">Neu</p>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 10px;">
+                <p
+                  style="color: #666; font-size: 8px; font-weight: 800; text-transform: uppercase; margin-bottom: 3px;">
+                  Behavioral Analysis</p>
+                <p style="color: #bbb; font-size: 11px; line-height: 1.3; margin: 0;">
+                  This purchase was not planned and lacks a clear necesssity. Impulse buys are often driven by instant gratification and short-term thinking.
+                </p>
+              </div>
+
+              <div
+                style="background-color: #090604; border: 1px solid #2d2116; border-radius: 8px; padding: 8px 10px; margin-bottom: 0;">
+                <div style="display: flex; gap: 6px; align-items: flex-start;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  <p style="color: #ddd; font-size: 10.5px; line-height: 1.3; margin: 0;">
+                    <span style="color: #f59e0b; font-weight: 700;">Warning:</span> You are spending on wants without delibrate thought.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div> -->
